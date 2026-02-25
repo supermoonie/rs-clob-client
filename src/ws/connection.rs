@@ -198,9 +198,8 @@ where
                     .map_err(|e| Error::with_source(Kind::WebSocket, WsError::Connection(e)))
             };
 
-            // Attempt connection
-            match connect_async(&endpoint).await {
-                Ok((ws_stream, _)) => {
+            match connect_result {
+                Ok(ws_stream) => {
                     attempt = 0;
                     backoff.reset();
                     _ = state_tx.send(ConnectionState::Connected {
