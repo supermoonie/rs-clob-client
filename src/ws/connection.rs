@@ -225,7 +225,6 @@ where
                     }
                 }
                 Err(e) => {
-                    let error = Error::with_source(Kind::WebSocket, WsError::Connection(e));
                     #[cfg(feature = "tracing")]
                     tracing::warn!("Unable to connect: {e:?}");
                     #[cfg(not(feature = "tracing"))]
