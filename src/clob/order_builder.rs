@@ -20,7 +20,7 @@ use crate::types::{Address, Decimal};
 pub(crate) const USDC_DECIMALS: u32 = 6;
 
 /// Maximum number of decimal places for `size`
-pub(crate) const LOT_SIZE_SCALE: u32 = 2;
+pub(crate) const LOT_SIZE_SCALE: u32 = 3;
 
 /// Placeholder type for compile-time checks on limit order builders
 #[non_exhaustive]
@@ -147,29 +147,30 @@ impl<K: AuthKind> OrderBuilder<Limit, K> {
         }
 
         let fee_rate = self.client.fee_rate_bps(token_id).await?;
-        let minimum_tick_size = self
-            .client
-            .tick_size(token_id)
-            .await?
-            .minimum_tick_size
-            .as_decimal();
+        // let minimum_tick_size = self
+        //     .client
+        //     .tick_size(token_id)
+        //     .await?
+        //     .minimum_tick_size
+        //     .as_decimal();
 
-        let decimals = minimum_tick_size.scale();
+        // let decimals = minimum_tick_size.scale();
+        let decimals = 3;
 
-        if price.scale() > minimum_tick_size.scale() {
-            return Err(Error::validation(format!(
-                "Unable to build Order: Price {price} has {} decimal places. Minimum tick size \
-                {minimum_tick_size} has {} decimal places. Price decimal places <= minimum tick size decimal places",
-                price.scale(),
-                minimum_tick_size.scale()
-            )));
-        }
+        // if price.scale() > minimum_tick_size.scale() {
+        //     return Err(Error::validation(format!(
+        //         "Unable to build Order: Price {price} has {} decimal places. Minimum tick size \
+        //         {minimum_tick_size} has {} decimal places. Price decimal places <= minimum tick size decimal places",
+        //         price.scale(),
+        //         minimum_tick_size.scale()
+        //     )));
+        // }
 
-        if price < minimum_tick_size || price > Decimal::ONE - minimum_tick_size {
-            return Err(Error::validation(format!(
-                "Price {price} is too small or too large for the minimum tick size {minimum_tick_size}"
-            )));
-        }
+        // if price < minimum_tick_size || price > Decimal::ONE - minimum_tick_size {
+        //     return Err(Error::validation(format!(
+        //         "Price {price} is too small or too large for the minimum tick size {minimum_tick_size}"
+        //     )));
+        // }
 
         let Some(size) = self.size else {
             return Err(Error::validation(
