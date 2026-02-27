@@ -2119,6 +2119,8 @@ impl<K: Kind> Client<Authenticated<K>> {
                 heartbeat_token: self.heartbeat_token.clone(),
             },
             _kind: PhantomData,
+            decimals: None,
+            base_fee: None,
         }
     }
 }

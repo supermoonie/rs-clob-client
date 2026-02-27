@@ -156,6 +156,18 @@ impl<K: AuthKind> OrderBuilder<Limit, K> {
             ));
         };
 
+        let Some(base_fee) = self.base_fee else {
+            return Err(Error::validation(
+                "Unable to build Order due to missing base_fee",
+            ));
+        };
+
+        let Some(decimals) = self.decimals else {
+            return Err(Error::validation(
+                "Unable to build Order due to missing decimals",
+            ));
+        };
+
         if price.is_sign_negative() {
             return Err(Error::validation(format!(
                 "Unable to build Order due to negative price {price}"
@@ -237,10 +249,10 @@ impl<K: AuthKind> OrderBuilder<Limit, K> {
         let (taker_amount, maker_amount) = match side {
             Side::Buy => (
                 size,
-                (size * price).trunc_with_scale(self.decimals + LOT_SIZE_SCALE),
+                (size * price).trunc_with_scale(decimals + LOT_SIZE_SCALE),
             ),
             Side::Sell => (
-                (size * price).trunc_with_scale(self.decimals + LOT_SIZE_SCALE),
+                (size * price).trunc_with_scale(decimals + LOT_SIZE_SCALE),
                 size,
             ),
             side => return Err(Error::validation(format!("Invalid side: {side}"))),
@@ -256,7 +268,7 @@ impl<K: AuthKind> OrderBuilder<Limit, K> {
             makerAmount: U256::from(to_fixed_u128(maker_amount)),
             takerAmount: U256::from(to_fixed_u128(taker_amount)),
             side: side as u8,
-            feeRateBps: self.base_fee,
+            feeRateBps: base_fee,
             nonce: U256::from(nonce),
             signer: self.signer,
             expiration: U256::from(expiration.timestamp().to_u64().ok_or(Error::validation(
@@ -375,6 +387,18 @@ impl<K: AuthKind> OrderBuilder<Market, K> {
             ));
         };
 
+        let Some(base_fee) = self.base_fee else {
+            return Err(Error::validation(
+                "Unable to build Order due to missing base_fee",
+            ));
+        };
+
+        let Some(decimals) = self.decimals else {
+            return Err(Error::validation(
+                "Unable to build Order due to missing decimals",
+            ));
+        };
+
         let amount = self
             .amount
             .ok_or_else(|| Error::validation("Unable to build Order due to missing amount"))?;
@@ -405,7 +429,7 @@ impl<K: AuthKind> OrderBuilder<Market, K> {
         // let decimals = minimum_tick_size.scale();
 
         // Ensure that the market price returned internally is truncated to our tick size
-        let price = price.trunc_with_scale(self.decimals);
+        let price = price.trunc_with_scale(decimals);
         // if price < minimum_tick_size || price > Decimal::ONE - minimum_tick_size {
         //     return Err(Error::validation(format!(
         //         "Price {price} is too small or too large for the minimum tick size {minimum_tick_size}"
@@ -433,19 +457,19 @@ impl<K: AuthKind> OrderBuilder<Market, K> {
         let (taker_amount, maker_amount) = match (side, amount.0) {
             // Spend USDC to buy shares
             (Side::Buy, AmountInner::Usdc(_)) => {
-                let shares = (raw_amount / price).trunc_with_scale(self.decimals + LOT_SIZE_SCALE);
+                let shares = (raw_amount / price).trunc_with_scale(decimals + LOT_SIZE_SCALE);
                 (shares, raw_amount)
             }
 
             // Buy N shares: use cutoff `price` derived from ask depth
             (Side::Buy, AmountInner::Shares(_)) => {
-                let usdc = (raw_amount * price).trunc_with_scale(self.decimals + LOT_SIZE_SCALE);
+                let usdc = (raw_amount * price).trunc_with_scale(decimals + LOT_SIZE_SCALE);
                 (raw_amount, usdc)
             }
 
             // Sell N shares for USDC
             (Side::Sell, AmountInner::Shares(_)) => {
-                let usdc = (raw_amount * price).trunc_with_scale(self.decimals + LOT_SIZE_SCALE);
+                let usdc = (raw_amount * price).trunc_with_scale(decimals + LOT_SIZE_SCALE);
                 (usdc, raw_amount)
             }
 
@@ -468,7 +492,7 @@ impl<K: AuthKind> OrderBuilder<Market, K> {
             makerAmount: U256::from(to_fixed_u128(maker_amount)),
             takerAmount: U256::from(to_fixed_u128(taker_amount)),
             side: side as u8,
-            feeRateBps: self.base_fee,
+            feeRateBps: base_fee,
             nonce: U256::from(nonce),
             signer: self.signer,
             expiration: U256::ZERO,
