@@ -2,7 +2,8 @@ use reqwest::{Client as ReqwestClient, Method};
 use url::Url;
 
 use super::types::{
-    DepositRequest, DepositResponse, StatusRequest, StatusResponse, SupportedAssetsResponse,
+    DepositRequest, DepositResponse, QuoteRequest, QuoteResponse, StatusRequest, StatusResponse,
+    SupportedAssetsResponse, WithdrawRequest, WithdrawResponse,
 };
 use crate::Result;
 
@@ -118,6 +119,18 @@ impl Client {
         crate::request(&self.client, request, None).await
     }
 
+    /// Generate unique deposit addresses for withdrawing USDC.e
+    /// from your Polymarket wallet to any supported chain and token.
+    pub async fn withdraw(&self, request: &WithdrawRequest) -> Result<WithdrawResponse> {
+        let request = self
+            .client()
+            .request(Method::POST, format!("{}withdraw", self.host()))
+            .json(request)
+            .build()?;
+
+        crate::request(&self.client, request, None).await
+    }
+
     /// Get all supported chains and tokens for deposits.
     ///
     /// Returns information about which assets can be deposited and their
@@ -189,6 +202,18 @@ impl Client {
                 Method::GET,
                 format!("{}status/{}", self.host(), request.address),
             )
+            .build()?;
+
+        crate::request(&self.client, request, None).await
+    }
+
+    /// Get an estimated quote for a deposit or withdrawal,
+    /// including output amounts, checkout time, and a detailed fee breakdown.
+    pub async fn quote(&self, request: &QuoteRequest) -> Result<QuoteResponse> {
+        let request = self
+            .client()
+            .request(Method::POST, format!("{}quote", self.host()))
+            .json(request)
             .build()?;
 
         crate::request(&self.client, request, None).await
