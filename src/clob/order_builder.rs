@@ -41,6 +41,8 @@ pub struct OrderBuilder<OrderKind, K: AuthKind> {
     pub(crate) salt_generator: fn() -> u64,
     pub(crate) token_id: Option<U256>,
     pub(crate) price: Option<Decimal>,
+    pub(crate) decimals: Option<u32>,
+    pub(crate) base_fee: Option<U256>,
     pub(crate) size: Option<Decimal>,
     pub(crate) amount: Option<Amount>,
     pub(crate) side: Option<Side>,
@@ -65,6 +67,20 @@ impl<OrderKind, K: AuthKind> OrderBuilder<OrderKind, K> {
     #[must_use]
     pub fn side(mut self, side: Side) -> Self {
         self.side = Some(side);
+        self
+    }
+
+    /// Sets the base_fee for this builder. This is a required field.
+    #[must_use]
+    pub fn base_fee(mut self, base_fee: U256) -> Self {
+        self.base_fee = Some(base_fee);
+        self
+    }
+
+    /// Sets the decimals for this builder. This is a required field.
+    #[must_use]
+    pub fn decimals(mut self, decimals: u32) -> Self {
+        self.decimals = Some(decimals);
         self
     }
 
@@ -146,7 +162,7 @@ impl<K: AuthKind> OrderBuilder<Limit, K> {
             )));
         }
 
-        let fee_rate = self.client.fee_rate_bps(token_id).await?;
+        // let fee_rate = self.client.fee_rate_bps(token_id).await?;
         // let minimum_tick_size = self
         //     .client
         //     .tick_size(token_id)
@@ -155,7 +171,7 @@ impl<K: AuthKind> OrderBuilder<Limit, K> {
         //     .as_decimal();
 
         // let decimals = minimum_tick_size.scale();
-        let decimals = 3;
+        // let decimals = 3;
 
         // if price.scale() > minimum_tick_size.scale() {
         //     return Err(Error::validation(format!(
@@ -221,10 +237,10 @@ impl<K: AuthKind> OrderBuilder<Limit, K> {
         let (taker_amount, maker_amount) = match side {
             Side::Buy => (
                 size,
-                (size * price).trunc_with_scale(decimals + LOT_SIZE_SCALE),
+                (size * price).trunc_with_scale(self.decimals + LOT_SIZE_SCALE),
             ),
             Side::Sell => (
-                (size * price).trunc_with_scale(decimals + LOT_SIZE_SCALE),
+                (size * price).trunc_with_scale(self.decimals + LOT_SIZE_SCALE),
                 size,
             ),
             side => return Err(Error::validation(format!("Invalid side: {side}"))),
@@ -240,7 +256,7 @@ impl<K: AuthKind> OrderBuilder<Limit, K> {
             makerAmount: U256::from(to_fixed_u128(maker_amount)),
             takerAmount: U256::from(to_fixed_u128(taker_amount)),
             side: side as u8,
-            feeRateBps: U256::from(fee_rate.base_fee),
+            feeRateBps: self.base_fee,
             nonce: U256::from(nonce),
             signer: self.signer,
             expiration: U256::from(expiration.timestamp().to_u64().ok_or(Error::validation(
@@ -378,23 +394,23 @@ impl<K: AuthKind> OrderBuilder<Market, K> {
             None => self.calculate_price(order_type.clone()).await?,
         };
 
-        let minimum_tick_size = self
-            .client
-            .tick_size(token_id)
-            .await?
-            .minimum_tick_size
-            .as_decimal();
-        let fee_rate = self.client.fee_rate_bps(token_id).await?;
+        // let minimum_tick_size = self
+        //     .client
+        //     .tick_size(token_id)
+        //     .await?
+        //     .minimum_tick_size
+        //     .as_decimal();
+        // let fee_rate = self.client.fee_rate_bps(token_id).await?;
 
-        let decimals = minimum_tick_size.scale();
+        // let decimals = minimum_tick_size.scale();
 
         // Ensure that the market price returned internally is truncated to our tick size
-        let price = price.trunc_with_scale(decimals);
-        if price < minimum_tick_size || price > Decimal::ONE - minimum_tick_size {
-            return Err(Error::validation(format!(
-                "Price {price} is too small or too large for the minimum tick size {minimum_tick_size}"
-            )));
-        }
+        let price = price.trunc_with_scale(self.decimals);
+        // if price < minimum_tick_size || price > Decimal::ONE - minimum_tick_size {
+        //     return Err(Error::validation(format!(
+        //         "Price {price} is too small or too large for the minimum tick size {minimum_tick_size}"
+        //     )));
+        // }
 
         // When buying `YES` tokens, the user will "make" `USDC` dollars and "take"
         // `USDC` / `price` `YES` tokens. When selling `YES` tokens, the user will "make" `YES`
@@ -417,19 +433,19 @@ impl<K: AuthKind> OrderBuilder<Market, K> {
         let (taker_amount, maker_amount) = match (side, amount.0) {
             // Spend USDC to buy shares
             (Side::Buy, AmountInner::Usdc(_)) => {
-                let shares = (raw_amount / price).trunc_with_scale(decimals + LOT_SIZE_SCALE);
+                let shares = (raw_amount / price).trunc_with_scale(self.decimals + LOT_SIZE_SCALE);
                 (shares, raw_amount)
             }
 
             // Buy N shares: use cutoff `price` derived from ask depth
             (Side::Buy, AmountInner::Shares(_)) => {
-                let usdc = (raw_amount * price).trunc_with_scale(decimals + LOT_SIZE_SCALE);
+                let usdc = (raw_amount * price).trunc_with_scale(self.decimals + LOT_SIZE_SCALE);
                 (raw_amount, usdc)
             }
 
             // Sell N shares for USDC
             (Side::Sell, AmountInner::Shares(_)) => {
-                let usdc = (raw_amount * price).trunc_with_scale(decimals + LOT_SIZE_SCALE);
+                let usdc = (raw_amount * price).trunc_with_scale(self.decimals + LOT_SIZE_SCALE);
                 (usdc, raw_amount)
             }
 
@@ -452,7 +468,7 @@ impl<K: AuthKind> OrderBuilder<Market, K> {
             makerAmount: U256::from(to_fixed_u128(maker_amount)),
             takerAmount: U256::from(to_fixed_u128(taker_amount)),
             side: side as u8,
-            feeRateBps: U256::from(fee_rate.base_fee),
+            feeRateBps: self.base_fee,
             nonce: U256::from(nonce),
             signer: self.signer,
             expiration: U256::ZERO,
