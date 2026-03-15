@@ -20,7 +20,7 @@ use crate::types::{Address, Decimal};
 pub(crate) const USDC_DECIMALS: u32 = 6;
 
 /// Maximum number of decimal places for `size`
-pub(crate) const LOT_SIZE_SCALE: u32 = 3;
+pub(crate) const LOT_SIZE_SCALE: u32 = 2;
 
 /// Placeholder type for compile-time checks on limit order builders
 #[non_exhaustive]
