@@ -20,7 +20,7 @@ use crate::types::{Address, Decimal};
 pub(crate) const USDC_DECIMALS: u32 = 6;
 
 /// Maximum number of decimal places for `size`
-pub(crate) const LOT_SIZE_SCALE: u32 = 2;
+pub(crate) const LOT_SIZE_SCALE: u32 = 0;
 
 /// Placeholder type for compile-time checks on limit order builders
 #[non_exhaustive]
@@ -206,12 +206,12 @@ impl<K: AuthKind> OrderBuilder<Limit, K> {
             ));
         };
 
-        if size.scale() > LOT_SIZE_SCALE {
-            return Err(Error::validation(format!(
-                "Unable to build Order: Size {size} has {} decimal places. Maximum lot size is {LOT_SIZE_SCALE}",
-                size.scale()
-            )));
-        }
+        // if size.scale() > LOT_SIZE_SCALE {
+        //     return Err(Error::validation(format!(
+        //         "Unable to build Order: Size {size} has {} decimal places. Maximum lot size is {LOT_SIZE_SCALE}",
+        //         size.scale()
+        //     )));
+        // }
 
         if size.is_zero() || size.is_sign_negative() {
             return Err(Error::validation(format!(
